@@ -17,9 +17,18 @@ allow = [
   "MPL-2.0",
   "Unicode-3.0",
   "Unicode-DFS-2016",
+  "Unlicense",
   "Zlib",
 ]
 confidence-threshold = 0.8
+
+# arborium-nginx is GPL-3.0 (tree-sitter grammar for nginx config). It
+# comes in transitively via tracey-core -> marq[all-handlers] -> arborium,
+# is never called by mdbook-tracey, and is dead-code-eliminated from the
+# release binary — but cargo-deny checks the lockfile, not the link graph.
+[[licenses.exceptions]]
+name = "arborium-nginx"
+allow = ["GPL-3.0"]
 
 [bans]
 multiple-versions = "warn"
