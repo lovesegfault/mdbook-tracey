@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  # Gate the release on the same checks as every other commit. A tag on a
+  # broken commit should not produce a GitHub Release.
+  check:
+    name: nix flake check (${{ matrix.system }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
+          - os: macos-latest
+            system: aarch64-darwin
+    steps:
+      - uses: actions/checkout@v5
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix flake check -L --show-trace
+
+  release:
+    name: create GitHub release
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      # convco walks tag-to-tag history, so a shallow checkout would
+      # truncate the changelog to whatever fits in the default depth=1.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      # `-m 1` limits output to the single most-recent tag's section —
+      # exactly the delta since the previous release. convco groups
+      # commits by type (feat/fix/etc) and picks up BREAKING CHANGE:
+      # footers, so the release body is structured without any per-release
+      # authoring.
+      - name: generate changelog
+        run: nix run nixpkgs#convco -- changelog --max-versions 1 > RELEASE_NOTES.md
+
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file RELEASE_NOTES.md \
+            --verify-tag
