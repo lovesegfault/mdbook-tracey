@@ -1,0 +1,20 @@
+---
+source: tests/preprocessor.rs
+expression: out
+---
+# Examples
+
+Markers inside code fences are examples, not definitions:
+
+```markdown
+r[example.one]
+This is how you write a requirement.
+```
+
+And inline too: `r[example.two]` shouldn't count.
+
+But this one outside the fence does:
+
+<div class="tracey-req" id="r-real.requirement"><a class="tracey-req-anchor" href="#r-real.requirement">real.requirement</a></div>
+
+This is real.

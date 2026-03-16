@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: nix flake check (${{ matrix.system }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
+          - os: macos-latest
+            system: aarch64-darwin
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # `nix flake check` is the entire CI gate: crane builds the binary
+      # (build), clippy/nextest/deny/doc run as check derivations, the
+      # test-book check does an end-to-end mdbook build with the preprocessor
+      # on PATH and greps for the expected anchor, and pre-commit runs
+      # treefmt + linters. Everything shares a single cargoArtifacts
+      # deps-cache layer, so a clean tree rebuilds only the workspace crate
+      # per check.
+      - run: nix flake check -L --show-trace

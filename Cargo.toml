@@ -1,0 +1,28 @@
+[package]
+name = "mdbook-tracey"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+authors = ["Bernardo Meurer Costa"]
+repository = "https://github.com/lovesegfault/mdbook-tracey"
+description = "mdbook preprocessor for tracey requirement annotations"
+
+[dependencies]
+mdbook-preprocessor = "0.5"
+marq = { version = "2", default-features = false }
+pulldown-cmark = "0.13"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+semver = "1"
+
+[dev-dependencies]
+pretty_assertions = "1"
+insta = "1"
+
+[lints.rust]
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

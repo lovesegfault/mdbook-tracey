@@ -1,0 +1,19 @@
+---
+source: tests/preprocessor.rs
+expression: "transform(md, None)"
+---
+# API Specification
+
+<div class="tracey-req" id="r-api.error-format"><a class="tracey-req-anchor" href="#r-api.error-format">api.error-format</a></div>
+
+> API errors must follow this format:
+>
+> ```json
+> {"error": "message", "code": 400}
+> ```
+
+Regular paragraph after the blockquote.
+
+<div class="tracey-req" id="r-api.retry-policy+2"><a class="tracey-req-anchor" href="#r-api.retry-policy+2">api.retry-policy+2</a></div>
+
+> Clients SHOULD retry with exponential backoff.

@@ -1,0 +1,10 @@
+[book]
+title = "mdbook-tracey test book"
+authors = ["mdbook-tracey"]
+language = "en"
+src = "src"
+
+[preprocessor.tracey]
+coverage = "forward.json"
+
+[output.html]

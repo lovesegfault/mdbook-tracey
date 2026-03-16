@@ -1,0 +1,30 @@
+---
+source: tests/preprocessor.rs
+expression: "transform(md, None)"
+---
+# Observability
+
+rio-build provides three pillars of observability: logs, metrics, and traces.
+
+## Build Log Storage
+
+### Log Lifecycle
+
+<div class="tracey-req" id="r-obs.log.batch-64-100ms"><a class="tracey-req-anchor" href="#r-obs.log.batch-64-100ms">obs.log.batch-64-100ms</a></div>
+
+Log lines are batched (up to 64 lines or 100ms, whichever first) in `BuildLogBatch` messages.
+
+<div class="tracey-req" id="r-obs.log.periodic-flush"><a class="tracey-req-anchor" href="#r-obs.log.periodic-flush">obs.log.periodic-flush</a></div>
+
+The scheduler flushes buffers to S3 periodically (every 30s) during active builds.
+
+## Metrics
+
+### Gateway Metrics
+
+<div class="tracey-req" id="r-obs.metric.gateway"><a class="tracey-req-anchor" href="#r-obs.metric.gateway">obs.metric.gateway</a></div>
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `rio_gateway_connections_total` | Counter | Total SSH connections |
+| `rio_gateway_connections_active` | Gauge | Currently active connections |
