@@ -77,7 +77,7 @@ fn collect_refs(map: &mut CoverageMap, result: ExtractionResult, project_root: &
             .strip_prefix(project_root)
             .unwrap_or(&r.file)
             .to_string_lossy()
-            .into_owned();
+            .replace('\\', "/");
         slot.push(Ref { file, line: r.line });
     }
 }

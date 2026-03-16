@@ -15,7 +15,7 @@ pub mod render;
 
 use std::fs;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use mdbook_preprocessor::book::{Book, BookItem};
 use mdbook_preprocessor::{Preprocessor, PreprocessorContext};
 
@@ -46,7 +46,7 @@ impl Preprocessor for Tracey {
                 let styx = fs::read_to_string(styx_path)
                     .with_context(|| format!("reading tracey config {}", styx_path.display()))?;
                 let tracey_cfg: tracey_config::Config = facet_styx::from_str(&styx)
-                    .map_err(|e| anyhow::anyhow!("{e}"))
+                    .map_err(|e| anyhow!("{e}"))
                     .with_context(|| format!("parsing {}", styx_path.display()))?;
 
                 // Tracey config lives at .config/tracey/config.styx relative
@@ -103,7 +103,9 @@ fn derive_repo_url(cfg: &tracey_config::Config) -> Option<String> {
     let source = cfg.specs.iter().find_map(|s| s.source_url.as_deref())?;
     let source = source.trim_end_matches('/');
     if source.starts_with("https://github.com/") {
-        Some(format!("{source}/blob/main/{{file}}#L{{line}}"))
+        // /blob/HEAD/ resolves to the default branch regardless of whether
+        // it's called main, master, trunk, etc.
+        Some(format!("{source}/blob/HEAD/{{file}}#L{{line}}"))
     } else {
         None
     }
@@ -187,27 +189,17 @@ mod tests {
     #[test]
     fn coverage_lookup_by_base() {
         let mut map = CoverageMap::new();
+        fn rf(file: &str, line: usize) -> Ref {
+            Ref {
+                file: file.into(),
+                line,
+            }
+        }
         map.insert(
             "foo.bar".into(),
             Coverage {
-                impl_refs: vec![
-                    Ref {
-                        file: "a.rs".into(),
-                        line: 1,
-                    },
-                    Ref {
-                        file: "b.rs".into(),
-                        line: 2,
-                    },
-                    Ref {
-                        file: "c.rs".into(),
-                        line: 3,
-                    },
-                ],
-                verify_refs: vec![Ref {
-                    file: "t.rs".into(),
-                    line: 5,
-                }],
+                impl_refs: vec![rf("a.rs", 1), rf("b.rs", 2), rf("c.rs", 3)],
+                verify_refs: vec![rf("t.rs", 5)],
             },
         );
         // Coverage is keyed by base ID; version suffix in the marker
@@ -246,7 +238,7 @@ mod tests {
         });
         assert_eq!(
             derive_repo_url(&cfg),
-            Some("https://github.com/lovesegfault/rix/blob/main/{file}#L{line}".into())
+            Some("https://github.com/lovesegfault/rix/blob/HEAD/{file}#L{line}".into())
         );
     }
 
@@ -262,7 +254,7 @@ mod tests {
         });
         assert_eq!(
             derive_repo_url(&cfg),
-            Some("https://github.com/foo/bar/blob/main/{file}#L{line}".into())
+            Some("https://github.com/foo/bar/blob/HEAD/{file}#L{line}".into())
         );
     }
 

@@ -63,7 +63,7 @@ The path is resolved relative to `book.toml`. The scan reuses the
 duplication in `book.toml`. A missing or malformed config is a build error.
 
 Repo links in the popover are derived from `source_url` in the tracey config
-when it looks like a GitHub repo (`.../blob/main/{file}#L{line}`). Override
+when it looks like a GitHub repo (`.../blob/HEAD/{file}#L{line}`). Override
 with an explicit template:
 
 ```toml
