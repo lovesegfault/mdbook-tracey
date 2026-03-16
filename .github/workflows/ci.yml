@@ -32,7 +32,10 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: cachix/cachix-action@v16
+        with:
+          name: mdbook-tracey
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       # `nix flake check` is the entire CI gate: crane builds the binary
       # (build), clippy/nextest/deny/doc run as check derivations, the
