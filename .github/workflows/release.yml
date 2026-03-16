@@ -30,9 +30,13 @@ jobs:
       - run: nix flake check -L --show-trace
 
   release:
-    name: create GitHub release
+    name: publish
     needs: check
     runs-on: ubuntu-latest
+    # Binds the job to a deployment environment. GitHub auto-creates it on
+    # first run; adding a protection rule there later (required reviewer,
+    # wait timer) gives a publish gate without editing this file.
+    environment: release
     steps:
       # convco walks tag-to-tag history, so a shallow checkout would
       # truncate the changelog to whatever fits in the default depth=1.
@@ -41,6 +45,22 @@ jobs:
           fetch-depth: 0
 
       - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # Publish first, release second. If crates.io rejects (version already
+      # exists, bad token), the job fails before the GitHub Release is
+      # created — so there's never a release pointing at a crate that
+      # didn't ship. The reverse partial state (crate live, release
+      # creation failed) is recoverable with `gh release create` by hand.
+      #
+      # The check matrix already proved the crate compiles on three
+      # systems; `cargo publish` recompiles once more to verify the
+      # *packaged* .crate tarball builds (catches files forgotten in
+      # include/exclude — not a concern today, but the guard is cheap).
+      - name: publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: nix develop --command cargo publish
 
       # `-m 1` limits output to the single most-recent tag's section —
       # exactly the delta since the previous release. convco groups
