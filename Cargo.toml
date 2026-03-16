@@ -9,7 +9,9 @@ description = "mdbook preprocessor for tracey requirement annotations"
 
 [dependencies]
 mdbook-preprocessor = "0.5"
-marq = { version = "2", default-features = false }
+tracey-core = "1.3"
+tracey-config = "1.3"
+facet-styx = "2"
 pulldown-cmark = "0.13"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

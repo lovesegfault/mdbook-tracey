@@ -8,8 +8,8 @@
 //! Detection is line-based (we need to replace whole lines), with a
 //! pulldown-cmark pass up front to mask out code and HTML regions.
 
-use marq::{RuleId, parse_rule_id};
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use tracey_core::{RuleId, parse_rule_id};
 
 /// A requirement marker found in chapter markdown.
 #[derive(Debug, Clone)]
@@ -55,7 +55,7 @@ pub fn find_markers(content: &str) -> Vec<Marker> {
         };
 
         // Inner content may carry attributes (`foo.bar status=draft`);
-        // split on the first whitespace and hand just the ID to marq.
+        // split on the first whitespace and parse just the ID.
         // On parse failure we leave the line alone — better to render the
         // raw marker than to silently drop a malformed spec line.
         let id_part = inner
@@ -239,10 +239,10 @@ mod tests {
 
     #[test]
     fn malformed_version_left_alone() {
-        // marq::parse_rule_id is permissive about segment structure (it
-        // accepts `foo..bar`, `nodot`, etc. — the "at least one dot" rule
-        // is tracey-spec, not marq) but it does reject bad version
-        // suffixes. Those lines render as-is.
+        // parse_rule_id is permissive about segment structure (it accepts
+        // `foo..bar`, `nodot`, etc. — the "at least one dot" rule is a
+        // tracey-spec convention, not enforced by the parser) but it does
+        // reject bad version suffixes. Those lines render as-is.
         assert!(find_markers("r[foo.bar+]\n").is_empty());
         assert!(find_markers("r[foo.bar+0]\n").is_empty());
         assert!(find_markers("r[foo.bar+1+2]\n").is_empty());

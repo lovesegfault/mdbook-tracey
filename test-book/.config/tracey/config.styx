@@ -1,0 +1,22 @@
+@schema {id crate:tracey-config@1, cli tracey}
+
+// Test-book fixture config. Scans fixture-src/*.rs for r[impl ...] and
+// r[verify ...] annotations matching the markers in src/chapter_1.md.
+
+specs (
+  {
+    name test
+    source_url https://github.com/lovesegfault/mdbook-tracey
+    include (
+      src/*.md
+    )
+    impls (
+      {
+        name rust
+        include (
+          fixture-src/**/*.rs
+        )
+      }
+    )
+  }
+)

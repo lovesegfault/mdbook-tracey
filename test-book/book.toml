@@ -5,6 +5,6 @@ language = "en"
 src = "src"
 
 [preprocessor.tracey]
-coverage = "forward.json"
+tracey_config = ".config/tracey/config.styx"
 
 [output.html]

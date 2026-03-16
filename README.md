@@ -6,8 +6,10 @@ An [mdbook](https://rust-lang.github.io/mdBook/) preprocessor for
 Tracey defines requirements in spec markdown with `r[req.id]` markers and
 links them to `// r[impl req.id]` annotations in source code. Without this
 preprocessor, mdbook renders those markers as raw text. With it, each marker
-becomes a styled anchor you can link to — and if you point it at a dump of
-tracey's coverage data, each anchor also shows impl/verify badges.
+becomes a styled anchor you can link to — and if you point it at your
+`.config/tracey/config.styx`, it scans the source tree at build time and
+decorates each anchor with impl/verify badges. Hover a badge to see every
+reference; click through to GitHub.
 
 ## Install
 
@@ -46,30 +48,36 @@ render as a styled badge with an anchor at `#r-obs.log.batch-64-100ms`.
 
 ## Coverage badges
 
-Optionally point the preprocessor at a JSON dump of tracey's `/api/forward`
-endpoint and each requirement badge will show how many `impl` and `verify`
-references tracey found for it:
+Point the preprocessor at your tracey config and it runs the source scan at
+build time. Each requirement badge shows how many `impl` and `verify`
+references tracey found; hovering a badge lists every `file:line`, linked to
+your repo.
 
 ```toml
 [preprocessor.tracey]
-coverage = "tracey-forward.json"
+tracey_config = "../.config/tracey/config.styx"
 ```
 
-To produce the dump, run `tracey web` and fetch the forward-traceability API:
+The path is resolved relative to `book.toml`. The scan reuses the
+`include`/`exclude` globs from each `impls` block in the tracey config — no
+duplication in `book.toml`. A missing or malformed config is a build error.
 
-```sh
-curl -s http://localhost:8000/api/forward > docs/tracey-forward.json
+Repo links in the popover are derived from `source_url` in the tracey config
+when it looks like a GitHub repo (`.../blob/main/{file}#L{line}`). Override
+with an explicit template:
+
+```toml
+[preprocessor.tracey]
+tracey_config = "../.config/tracey/config.styx"
+repo_url = "https://github.com/foo/bar/blob/trunk/{file}#L{line}"
 ```
-
-The path is resolved relative to `book.toml`. A missing or malformed
-coverage file is a build error — if you've configured a path, silently
-falling back to anchor-only mode would just hide the misconfiguration.
 
 ## Configuration
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `coverage` | string | *(none)* | Path to an `/api/forward` JSON dump, relative to `book.toml`. Omit for anchor-only mode. |
+| `tracey_config` | string | *(none)* | Path to `.config/tracey/config.styx`, relative to `book.toml`. Omit for anchor-only mode. |
+| `repo_url` | string | *(derived)* | URL template for ref links. `{file}` and `{line}` are substituted. Derived from `source_url` if unset. |
 | `style` | bool | `true` | Inject the built-in `<style>` block. Set to `false` if you ship your own CSS. |
 
 ## What counts as a marker

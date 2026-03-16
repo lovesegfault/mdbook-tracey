@@ -1,6 +1,6 @@
 ---
 source: tests/preprocessor.rs
-expression: "transform(md, Some(&cov))"
+expression: "transform(md, Some(&cov),\nSome(\"https://github.com/x/y/blob/main/{file}#L{line}\"))"
 ---
 # Observability
 
@@ -10,11 +10,11 @@ rio-build provides three pillars of observability: logs, metrics, and traces.
 
 ### Log Lifecycle
 
-<div class="tracey-req" id="r-obs.log.batch-64-100ms"><a class="tracey-req-anchor" href="#r-obs.log.batch-64-100ms">obs.log.batch-64-100ms</a><span class="tracey-req-badges"><span class="tracey-badge impl">impl 2</span><span class="tracey-badge verify">verify 1</span></span></div>
+<div class="tracey-req" id="r-obs.log.batch-64-100ms"><a class="tracey-req-anchor" href="#r-obs.log.batch-64-100ms">obs.log.batch-64-100ms</a><span class="tracey-req-badges"><span class="tracey-badge impl">impl 2<div class="tracey-popover"><a href="https://github.com/x/y/blob/main/src/scheduler.rs#L42">src/scheduler.rs:42</a><a href="https://github.com/x/y/blob/main/src/worker.rs#L128">src/worker.rs:128</a></div></span><span class="tracey-badge verify">verify 1<div class="tracey-popover"><a href="https://github.com/x/y/blob/main/tests/log_test.rs#L15">tests/log_test.rs:15</a></div></span></span></div>
 
 Log lines are batched (up to 64 lines or 100ms, whichever first) in `BuildLogBatch` messages.
 
-<div class="tracey-req" id="r-obs.log.periodic-flush"><a class="tracey-req-anchor" href="#r-obs.log.periodic-flush">obs.log.periodic-flush</a><span class="tracey-req-badges"><span class="tracey-badge impl">impl 1</span><span class="tracey-badge verify zero">verify 0</span></span></div>
+<div class="tracey-req" id="r-obs.log.periodic-flush"><a class="tracey-req-anchor" href="#r-obs.log.periodic-flush">obs.log.periodic-flush</a><span class="tracey-req-badges"><span class="tracey-badge impl">impl 1<div class="tracey-popover"><a href="https://github.com/x/y/blob/main/src/scheduler.rs#L89">src/scheduler.rs:89</a></div></span><span class="tracey-badge verify zero">verify 0</span></span></div>
 
 The scheduler flushes buffers to S3 periodically (every 30s) during active builds.
 
