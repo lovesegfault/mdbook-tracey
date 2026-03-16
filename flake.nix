@@ -52,6 +52,44 @@
         inputs.git-hooks-nix.flakeModule
       ];
 
+      # System-agnostic outputs. The overlay builds with the *consumer's*
+      # rustPlatform, not our crane/rust-overlay stack — so the package
+      # composes into someone else's nixpkgs without dragging our pins
+      # along. The crane path stays for local `nix build` / `nix flake
+      # check` where the shared cargoArtifacts cache matters.
+      flake.overlays.default = final: _prev: {
+        mdbook-tracey = final.rustPlatform.buildRustPackage {
+          pname = "mdbook-tracey";
+          inherit ((builtins.fromTOML (builtins.readFile ./Cargo.toml)).package) version;
+
+          src = final.lib.fileset.toSource {
+            root = ./.;
+            fileset = final.lib.fileset.unions [
+              ./Cargo.toml
+              ./Cargo.lock
+              ./src
+            ];
+          };
+
+          cargoLock.lockFile = ./Cargo.lock;
+
+          # Tests run via crane in our own flake checks; consumers building
+          # through the overlay just want the binary.
+          doCheck = false;
+
+          buildInputs = final.lib.optionals final.stdenv.isDarwin [
+            final.libiconv
+          ];
+
+          meta = with final.lib; {
+            description = "mdbook preprocessor for tracey requirement annotations";
+            homepage = "https://github.com/lovesegfault/mdbook-tracey";
+            license = licenses.bsd3;
+            mainProgram = "mdbook-tracey";
+          };
+        };
+      };
+
       perSystem =
         {
           config,
@@ -211,6 +249,16 @@
 
           checks = {
             build = mdbook-tracey;
+
+            # Prove the overlay builds against our own nixpkgs. Catches
+            # drift between what crane (via rust-overlay's pinned stable)
+            # can compile and what nixpkgs' rustPlatform can — e.g. if we
+            # start using a language feature nixpkgs' Rust doesn't have yet.
+            overlay-build =
+              (import nixpkgs {
+                inherit system;
+                overlays = [ inputs.self.overlays.default ];
+              }).mdbook-tracey;
           }
           // cargoChecks;
 
