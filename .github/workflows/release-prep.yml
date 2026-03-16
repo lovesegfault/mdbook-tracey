@@ -1,0 +1,65 @@
+name: Prepare release
+
+# Automates the manual steps: compute the next version, bump Cargo.toml,
+# commit, tag, push. The tag push triggers release.yml which does the
+# actual publish (check matrix → cargo publish → GitHub Release).
+#
+# The push MUST use a PAT, not GITHUB_TOKEN — GitHub suppresses workflow
+# triggers on events created by GITHUB_TOKEN to prevent recursion, so a
+# tag pushed that way would land silently without firing release.yml.
+# Requires a RELEASE_PAT secret (fine-grained, this repo, contents:write).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (leave empty to use convco version --bump)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prep:
+    name: bump, tag, push
+    runs-on: ubuntu-latest
+    steps:
+      # convco needs tag history to compute the bump; the commit/tag we
+      # create needs a non-detached HEAD to push back to.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: resolve version
+        id: v
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            v="${{ inputs.version }}"
+          else
+            v="$(nix run nixpkgs#convco -- version --bump)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $v"
+
+      - name: bump Cargo.toml
+        run: |
+          nix develop --command cargo set-version "${{ steps.v.outputs.version }}"
+
+      - name: commit and tag
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): $v"
+          git tag -a "v$v" -m "v$v"
+
+      # Atomic: either both refs land or neither does. A half-push (commit
+      # without tag) would leave main bumped with no release fired.
+      - name: push
+        run: git push --atomic origin main "v${{ steps.v.outputs.version }}"
