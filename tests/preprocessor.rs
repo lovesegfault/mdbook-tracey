@@ -67,3 +67,16 @@ fn inline_mentions_survive() {
     assert!(out.contains("When implementing r[sec.drv.validate]"));
     insta::assert_snapshot!(out);
 }
+
+#[test]
+fn html_blocks_left_alone() {
+    let md = include_str!("fixtures/html-block.md");
+    let out = transform(md, None);
+    // Only r[real.marker] gets an anchor; the <pre> example and the
+    // <!-- --> commented marker survive as literal text.
+    assert_eq!(out.matches(r#"class="tracey-req""#).count(), 1);
+    assert!(out.contains("r[section.rule-name]"));
+    assert!(out.contains("r[commented.out]"));
+    assert!(out.contains(r#"id="r-real.marker""#));
+    insta::assert_snapshot!(out);
+}

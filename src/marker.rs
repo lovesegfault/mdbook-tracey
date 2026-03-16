@@ -1,12 +1,12 @@
 //! Requirement-marker detection in chapter markdown.
 //!
-//! A marker is `PREFIX[ID]` where PREFIX is `[a-z0-9]+`. Tracey recognizes a
-//! marker as a definition only when it opens a paragraph at column 0 or opens
-//! a blockquote line; inline occurrences and anything inside code
-//! blocks/spans are prose.
+//! A marker is `PREFIX[ID]` where PREFIX is `[a-z0-9]+`. We recognize a
+//! marker as a definition when it sits alone on a line at column 0 (or
+//! opens a blockquote line); inline occurrences and anything inside code
+//! or HTML blocks are prose.
 //!
-//! Detection here is line-based (we need to replace whole lines), with a
-//! pulldown-cmark pass up front to mask out code regions.
+//! Detection is line-based (we need to replace whole lines), with a
+//! pulldown-cmark pass up front to mask out code and HTML regions.
 
 use marq::{RuleId, parse_rule_id};
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
@@ -55,10 +55,13 @@ pub fn find_markers(content: &str) -> Vec<Marker> {
         };
 
         // Inner content may carry attributes (`foo.bar status=draft`);
-        // split on the first space and hand just the ID to marq.
+        // split on the first whitespace and hand just the ID to marq.
         // On parse failure we leave the line alone — better to render the
         // raw marker than to silently drop a malformed spec line.
-        let id_part = inner.split_once(' ').map(|(id, _)| id).unwrap_or(inner);
+        let id_part = inner
+            .split(|c: char| c.is_ascii_whitespace())
+            .next()
+            .unwrap_or(inner);
         let Some(id) = parse_rule_id(id_part) else {
             continue;
         };
@@ -101,8 +104,8 @@ fn parse_leading_marker(text: &str) -> Option<(&str, &str)> {
 }
 
 /// Build a per-byte mask: `true` where the byte falls inside a fenced or
-/// indented code block, or an inline backtick span. Markers starting at a
-/// masked byte are examples, not definitions.
+/// indented code block, an inline backtick span, or a raw HTML block.
+/// Markers starting at a masked byte are examples, not definitions.
 fn code_mask(content: &str) -> Vec<bool> {
     let mut mask = vec![false; content.len()];
     let mut depth = 0usize;
@@ -110,15 +113,15 @@ fn code_mask(content: &str) -> Vec<bool> {
     let parser = Parser::new_ext(content, Options::all()).into_offset_iter();
     for (event, range) in parser {
         match event {
-            Event::Start(Tag::CodeBlock(_)) => {
+            Event::Start(Tag::CodeBlock(_) | Tag::HtmlBlock) => {
                 depth += 1;
                 fill(&mut mask, range);
             }
-            Event::End(TagEnd::CodeBlock) => {
+            Event::End(TagEnd::CodeBlock | TagEnd::HtmlBlock) => {
                 depth = depth.saturating_sub(1);
                 fill(&mut mask, range);
             }
-            Event::Code(_) => fill(&mut mask, range),
+            Event::Code(_) | Event::Html(_) | Event::InlineHtml(_) => fill(&mut mask, range),
             _ if depth > 0 => fill(&mut mask, range),
             _ => {}
         }
@@ -196,6 +199,14 @@ mod tests {
     }
 
     #[test]
+    fn inside_html_block_is_ignored() {
+        assert!(find_markers("<pre>\nr[foo.bar]\n</pre>\n").is_empty());
+        assert!(find_markers("<div>\nr[foo.bar]\n</div>\n").is_empty());
+        assert!(find_markers("<!--\nr[foo.bar]\n-->\n").is_empty());
+        assert!(find_markers("<script>\nr[foo.bar]\n</script>\n").is_empty());
+    }
+
+    #[test]
     fn version_suffix() {
         let markers = find_markers("r[auth.login+3]\n");
         assert_eq!(markers.len(), 1);
@@ -208,6 +219,13 @@ mod tests {
         // Attributes after the ID (`status=draft` etc.) are valid tracey
         // syntax. We don't render them, but they mustn't prevent detection.
         let markers = find_markers("r[foo.bar status=draft level=must]\n");
+        assert_eq!(markers.len(), 1);
+        assert_eq!(markers[0].id.base, "foo.bar");
+    }
+
+    #[test]
+    fn tab_separated_attributes() {
+        let markers = find_markers("r[foo.bar\tstatus=draft]\n");
         assert_eq!(markers.len(), 1);
         assert_eq!(markers[0].id.base, "foo.bar");
     }

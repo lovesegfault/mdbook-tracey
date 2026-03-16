@@ -32,6 +32,8 @@ pub fn parse(json: &str) -> Result<CoverageMap> {
     let mut map = HashMap::new();
     for spec in data.specs {
         for rule in spec.rules {
+            // Same base ID across two specs → last-write-wins. In practice
+            // tracey specs use disjoint prefixes so this shouldn't collide.
             map.insert(
                 rule.id.base,
                 Coverage {

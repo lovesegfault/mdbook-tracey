@@ -38,7 +38,10 @@ pub const STYLE: &str = concat!(
 ///
 /// The trailing blank line is load-bearing: mdbook re-parses chapter content
 /// with pulldown-cmark, and raw HTML must be followed by a blank line to
-/// close the HTML block before markdown resumes.
+/// close the HTML block before markdown resumes. Note that a `<div>` at
+/// column 0 is a type-6 HTML block — it interrupts paragraphs and
+/// blockquotes per CommonMark, so a marker on line 2 of a blockquote pops
+/// the anchor *out* of the quote (the snapshot tests accept this).
 pub fn render_marker(m: &Marker, cov: Option<Coverage>) -> String {
     // marq uses `{prefix}-{id}` for anchor IDs (render.rs:1225); we match.
     let anchor = html_escape(&format!("{}-{}", m.prefix, m.id));
@@ -71,9 +74,9 @@ fn badge(s: &mut String, kind: &str, count: usize) {
     .unwrap();
 }
 
-/// Rule IDs are `[a-zA-Z0-9._+-]` by construction (marq validates), and
-/// prefixes are `[a-z0-9]` — nothing HTML-significant. The escape is here so
-/// a future spec change can't turn into an injection.
+/// marq's `parse_rule_id` is permissive — it only rejects empty strings and
+/// bad `+N` suffixes, so the charset is whatever the spec author typed.
+/// In practice that's `[a-zA-Z0-9._-]`, but we escape defensively.
 fn html_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
