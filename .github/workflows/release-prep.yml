@@ -33,6 +33,24 @@ jobs:
           ref: main
           token: ${{ secrets.RELEASE_PAT }}
 
+      # Refuse to tag a commit CI hasn't blessed. release.yml would catch
+      # a broken build eventually, but only after we've already bumped
+      # Cargo.toml and pushed a tag that points at garbage. Querying the
+      # existing run is free; re-running the 3-platform matrix is not.
+      - name: verify CI passed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          conclusion=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$sha&status=completed" \
+            --jq '.workflow_runs[0].conclusion // "none"')
+          echo "ci.yml conclusion for $sha: $conclusion"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI has not passed for $sha (conclusion: $conclusion). Wait for it or fix it."
+            exit 1
+          fi
+
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
